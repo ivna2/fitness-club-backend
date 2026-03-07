@@ -1,0 +1,14 @@
+# IDE
+.idea/
+*.iml
+
+# Maven
+target/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+application-local.yml

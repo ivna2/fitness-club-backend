@@ -14,3 +14,18 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+
+admin:
+  # Первичный администратор создаётся только если заданы обе переменные
+  email: ${ADMIN_EMAIL:}
+  password: ${ADMIN_PASSWORD:}
+
+server:
+  port: ${SERVER_PORT:8443}
+  ssl:
+    enabled: ${SSL_ENABLED:true}
+    # Хранилище с ключом сервера и цепочкой сертификатов (scripts/generate-certs.*); в репозиторий не коммитится
+    key-store: ${SSL_KEYSTORE:file:certs/server.p12}
+    key-store-type: PKCS12
+    key-store-password: ${SSL_KEYSTORE_PASSWORD:}
+    key-alias: ${SSL_KEY_ALIAS:server}

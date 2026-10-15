@@ -3,6 +3,7 @@ package fitnessclub.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import fitnessclub.model.Subscription;
 import fitnessclub.service.SubscriptionService;
@@ -12,6 +13,7 @@ import java.util.List;
 import static org.springframework.http.HttpStatus.CREATED;
 
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/subscriptions")
 @RequiredArgsConstructor
 public class SubscriptionController {

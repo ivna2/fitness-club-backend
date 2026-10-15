@@ -7,6 +7,10 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import fitnessclub.service.UserService;
 
+/**
+ * Первичный администратор создаётся только из переменных окружения ADMIN_EMAIL и ADMIN_PASSWORD.
+ * Учётных данных в коде и скриптах нет; если переменные не заданы, администратор не создаётся.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -16,17 +20,18 @@ public class StartupRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        String adminEmail = env.getProperty("admin.email", "admin@fitness.local");
-        String adminPassword = env.getProperty("admin.password", "Admin@123!");
+        String adminEmail = env.getProperty("admin.email");
+        String adminPassword = env.getProperty("admin.password");
 
+        if (adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
+            log.info("ADMIN_EMAIL/ADMIN_PASSWORD не заданы: администратор не создаётся");
+            return;
+        }
         if (!adminEmail.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
             throw new IllegalArgumentException("Неверный формат email администратора");
         }
-        if (!env.containsProperty("admin.password")) {
-            log.warn("Используется пароль администратора по умолчанию: задайте admin.password (ADMIN_PASSWORD)");
-        }
 
-        userService.createAdminIfNotExist(adminEmail, adminPassword);
-        log.info("Админ создан (если отсутствовал): {}", adminEmail);
+        userService.createAdminIfNotExist(adminEmail.trim().toLowerCase(), adminPassword);
+        log.info("Администратор проверен: {}", adminEmail);
     }
 }

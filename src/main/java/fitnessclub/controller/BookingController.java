@@ -20,17 +20,19 @@ public class BookingController {
     private final BookingService bookingService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Booking>> getAll() {
         return ResponseEntity.ok(bookingService.getAll());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @bookingService.isUserBooking(authentication.name, #id)")
     public ResponseEntity<Booking> get(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.get(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    @PreAuthorize("hasRole('ADMIN') or @bookingService.isUserMember(authentication.name, #booking.member?.id)")
     public ResponseEntity<Booking> add(@Valid @RequestBody Booking booking) {
         return ResponseEntity.status(CREATED).body(bookingService.add(booking));
     }

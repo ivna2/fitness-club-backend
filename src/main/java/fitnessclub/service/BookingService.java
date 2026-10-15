@@ -62,6 +62,13 @@ public class BookingService {
         repo.deleteById(id);
     }
 
+    /** Бронь от имени участника разрешена пользователю только для своей учётной записи участника. */
+    public boolean isUserMember(String username, Long memberId) {
+        return memberId != null && memberRepo.findById(memberId)
+                .map(member -> username.equals(member.getEmail()))
+                .orElse(false);
+    }
+
     public boolean isUserBooking(String username, Long bookingId) {
         return repo.findById(bookingId)
                 .map(Booking::getMember)

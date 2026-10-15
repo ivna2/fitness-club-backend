@@ -1,5 +1,6 @@
 package fitnessclub.controller;
 
+import fitnessclub.security.InvalidTokenException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -48,6 +49,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleAuthentication(AuthenticationException ex) {
         logger.warn("Authentication failed: {}", ex.getMessage());
         return error(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidToken(InvalidTokenException ex) {
+        logger.warn("Rejected token: {}", ex.getMessage());
+        return error(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)

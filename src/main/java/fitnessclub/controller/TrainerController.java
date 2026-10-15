@@ -3,6 +3,7 @@ package fitnessclub.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import fitnessclub.model.Trainer;
 import fitnessclub.service.TrainerService;
@@ -29,17 +30,20 @@ public class TrainerController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Trainer> add(@Valid @RequestBody Trainer trainer) {
         return ResponseEntity.status(CREATED).body(trainerService.add(trainer));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Trainer> update(@PathVariable Long id,
                                           @Valid @RequestBody Trainer trainer) {
         return ResponseEntity.ok(trainerService.update(id, trainer));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         trainerService.delete(id);
         return ResponseEntity.noContent().build();

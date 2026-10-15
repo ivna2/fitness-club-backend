@@ -4,10 +4,12 @@ import fitnessclub.dto.TokenResponse;
 import fitnessclub.model.SessionStatus;
 import fitnessclub.model.UserSession;
 import fitnessclub.repository.UserSessionRepository;
+import fitnessclub.security.InvalidTokenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -36,23 +38,30 @@ public class TokenService {
         return new TokenResponse(accessToken, refreshToken);
     }
 
+    // noRollbackFor: статусы REVOKED/EXPIRED должны сохраниться, даже когда запрос отклонён
+    @Transactional(noRollbackFor = InvalidTokenException.class)
     public TokenResponse refresh(String refreshToken) {
         String username = jwtTokenProvider.getUsernameFromRefreshToken(refreshToken);
         if (username == null) {
-            throw new IllegalArgumentException("Invalid refresh token");
+            throw new InvalidTokenException("Invalid refresh token");
         }
 
         UserSession session = sessionRepository.findByRefreshToken(jwtTokenProvider.hashRefreshToken(refreshToken))
-                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+                .orElseThrow(() -> new InvalidTokenException("Session not found"));
 
+        if (SessionStatus.REVOKED.equals(session.getStatus())) {
+            // Повторное использование уже отозванного токена: вероятна кража, отзываем все сессии пользователя
+            revokeAllActiveSessions(session.getUserId());
+            throw new InvalidTokenException("Refresh token has already been used");
+        }
         if (!SessionStatus.ACTIVE.equals(session.getStatus())) {
-            throw new IllegalArgumentException("Session is not active");
+            throw new InvalidTokenException("Session is not active");
         }
 
         if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
             session.setStatus(SessionStatus.EXPIRED);
             sessionRepository.save(session);
-            throw new IllegalArgumentException("Refresh token expired");
+            throw new InvalidTokenException("Refresh token expired");
         }
 
         // Ротация: старая сессия отзывается, выдаётся новая пара токенов
@@ -60,5 +69,11 @@ public class TokenService {
         sessionRepository.save(session);
 
         return login(username);
+    }
+
+    private void revokeAllActiveSessions(String username) {
+        for (UserSession active : sessionRepository.findByUserIdAndStatus(username, SessionStatus.ACTIVE)) {
+            active.setStatus(SessionStatus.REVOKED);
+        }
     }
 }

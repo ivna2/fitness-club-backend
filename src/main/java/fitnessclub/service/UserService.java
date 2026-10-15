@@ -8,7 +8,6 @@ import fitnessclub.model.User;
 import fitnessclub.model.Member;
 import fitnessclub.repository.RoleRepository;
 import fitnessclub.repository.UserRepository;
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -25,11 +24,7 @@ public class UserService {
         return userRepo.findByUsername(username);
     }
 
-    public boolean existsByUsername(String username) {
-        return userRepo.existsByUsername(username);
-    }
-
-    // === АДМИН: создаётся БЕЗ Member ===
+    // Администратор не связан с участником клуба (member = null)
     public User createAdminIfNotExist(String adminUsername, String adminPassword) {
         if (userRepo.existsByUsername(adminUsername)) {
             return userRepo.findByUsername(adminUsername).orElseThrow();
@@ -39,7 +34,6 @@ public class UserService {
         user.setUsername(adminUsername);
         user.setPassword(passwordEncoder.encode(adminPassword));
         user.setEnabled(true);
-        user.setMember(null); // ← админ НЕ участник!
 
         Role adminRole = roleRepo.findByName("ROLE_ADMIN")
                 .orElseGet(() -> roleRepo.save(new Role(null, "ROLE_ADMIN")));
@@ -47,7 +41,6 @@ public class UserService {
 
         return userRepo.save(user);
     }
-
 
     public void createRegularUser(String email, String rawPassword) {
         if (userRepo.existsByUsername(email)) {

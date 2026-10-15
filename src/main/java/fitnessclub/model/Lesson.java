@@ -1,6 +1,9 @@
 package fitnessclub.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,13 +21,17 @@ public class Lesson {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Name is required")
     private String name;
 
-    // связь на тренера
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "trainer_id")
+    @NotNull(message = "Trainer is required")
     private Trainer trainer;
 
+    @NotNull(message = "Date and time are required")
     private LocalDateTime dateTime;
+
+    @Positive(message = "Capacity must be positive")
     private int capacity;
 }

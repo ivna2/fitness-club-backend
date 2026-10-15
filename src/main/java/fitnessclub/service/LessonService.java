@@ -6,6 +6,7 @@ import fitnessclub.model.Lesson;
 import fitnessclub.repository.LessonRepository;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -17,7 +18,7 @@ public class LessonService {
     }
 
     public Lesson get(Long id) {
-        return repo.findById(id).orElse(null);
+        return repo.findById(id).orElseThrow(() -> new NoSuchElementException("Lesson not found: " + id));
     }
 
     public Lesson add(Lesson lesson) {
@@ -25,11 +26,17 @@ public class LessonService {
     }
 
     public Lesson update(Long id, Lesson lesson) {
+        if (!repo.existsById(id)) {
+            throw new NoSuchElementException("Lesson not found: " + id);
+        }
         lesson.setId(id);
         return repo.save(lesson);
     }
 
     public void delete(Long id) {
+        if (!repo.existsById(id)) {
+            throw new NoSuchElementException("Lesson not found: " + id);
+        }
         repo.deleteById(id);
     }
 }

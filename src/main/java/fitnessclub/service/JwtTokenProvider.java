@@ -1,89 +1,94 @@
 package fitnessclub.service;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import lombok.RequiredArgsConstructor;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collection;
+import java.util.Date;
+import java.util.UUID;
 
 @Component
-@RequiredArgsConstructor
 public class JwtTokenProvider {
 
-    @Value("${app.jwt.secret}")
-    private String jwtSecret;
+    private static final String TOKEN_TYPE_CLAIM = "type";
+    private static final String ACCESS_TYPE = "access";
+    private static final String REFRESH_TYPE = "refresh";
 
-    @Value("${app.jwt.access-token-expiration}")
-    private long accessTokenExpiration;
+    private final SecretKey signingKey;
+    private final long accessTokenExpiration;
+    private final long refreshTokenExpiration;
 
-    @Value("${app.jwt.refresh-token-expiration}")
-    private long refreshTokenExpiration;
+    public JwtTokenProvider(@Value("${app.jwt.secret}") String jwtSecret,
+                            @Value("${app.jwt.access-token-expiration}") long accessTokenExpiration,
+                            @Value("${app.jwt.refresh-token-expiration}") long refreshTokenExpiration) {
+        // Keys.hmacShaKeyFor отклоняет ключи короче 256 бит ещё при старте приложения
+        this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        this.accessTokenExpiration = accessTokenExpiration;
+        this.refreshTokenExpiration = refreshTokenExpiration;
+    }
 
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
-        return new SecretKeySpec(keyBytes, SignatureAlgorithm.HS256.getJcaName());
+    public long getRefreshTokenExpiration() {
+        return refreshTokenExpiration;
     }
 
     public String generateAccessToken(String username, Collection<? extends GrantedAuthority> authorities) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("authorities", authorities.stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList()));
-
         return Jwts.builder()
-                .setClaims(claims)
+                .claim("authorities", authorities.stream().map(GrantedAuthority::getAuthority).toList())
+                .claim(TOKEN_TYPE_CLAIM, ACCESS_TYPE)
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .signWith(signingKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public String generateRefreshToken(String username) {
         return Jwts.builder()
+                .claim(TOKEN_TYPE_CLAIM, REFRESH_TYPE)
+                .setId(UUID.randomUUID().toString()) // уникальность токена и его хэша в user_sessions
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + refreshTokenExpiration))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .signWith(signingKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+    /** Имя пользователя из действительного access-токена или null. */
+    public String getUsernameFromAccessToken(String token) {
+        return getSubject(token, ACCESS_TYPE);
     }
 
-    public String getUsernameFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-        return claims.getSubject();
+    /** Имя пользователя из действительного refresh-токена или null. */
+    public String getUsernameFromRefreshToken(String token) {
+        return getSubject(token, REFRESH_TYPE);
+    }
+
+    private String getSubject(String token, String expectedType) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(signingKey)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return expectedType.equals(claims.get(TOKEN_TYPE_CLAIM, String.class)) ? claims.getSubject() : null;
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
+        }
     }
 
     public String hashRefreshToken(String token) {
         return Jwts.builder()
                 .setSubject("refresh_token_hash")
                 .claim("token", token)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .signWith(signingKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 }

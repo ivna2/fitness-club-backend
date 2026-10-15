@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 @Data
 @Entity
-@Table(name = "app_user")  // ← ЭТО ГЛАВНОЕ ИЗМЕНЕНИЕ!
+@Table(name = "app_user")
 public class User implements UserDetails {
 
     @Id
@@ -43,7 +43,7 @@ public class User implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))  // ← добавил "ROLE_" — это стандарт Spring Security
+                .map(role -> new SimpleGrantedAuthority(role.getName())) // имя роли уже хранится с префиксом ROLE_
                 .collect(Collectors.toList());
     }
 

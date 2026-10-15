@@ -1,3 +1,5 @@
-// src/main/java/fitnessclub/dto/RefreshRequest.java
 package fitnessclub.dto;
-public record RefreshRequest(String refreshToken) {}
+
+import jakarta.validation.constraints.NotBlank;
+
+public record RefreshRequest(@NotBlank String refreshToken) {}

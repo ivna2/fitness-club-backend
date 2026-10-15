@@ -1,17 +1,16 @@
-// src/main/java/fitnessclub/service/TokenService.java
 package fitnessclub.service;
 
-import org.springframework.security.core.userdetails.UserDetailsService;
 import fitnessclub.dto.TokenResponse;
 import fitnessclub.model.SessionStatus;
 import fitnessclub.model.UserSession;
 import fitnessclub.repository.UserSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -25,27 +24,25 @@ public class TokenService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         String accessToken = jwtTokenProvider.generateAccessToken(username, userDetails.getAuthorities());
         String refreshToken = jwtTokenProvider.generateRefreshToken(username);
-        String refreshTokenHash = jwtTokenProvider.hashRefreshToken(refreshToken);
 
+        LocalDateTime now = LocalDateTime.now();
         UserSession session = new UserSession();
-        session.setRefreshToken(refreshTokenHash);
+        session.setRefreshToken(jwtTokenProvider.hashRefreshToken(refreshToken));
         session.setUserId(username);
-        session.setCreatedAt(LocalDateTime.now());
-        session.setExpiresAt(LocalDateTime.now().plusDays(7));
+        session.setCreatedAt(now);
+        session.setExpiresAt(now.plus(Duration.ofMillis(jwtTokenProvider.getRefreshTokenExpiration())));
         sessionRepository.save(session);
 
         return new TokenResponse(accessToken, refreshToken);
     }
 
     public TokenResponse refresh(String refreshToken) {
-        if (!jwtTokenProvider.validateToken(refreshToken)) {
+        String username = jwtTokenProvider.getUsernameFromRefreshToken(refreshToken);
+        if (username == null) {
             throw new IllegalArgumentException("Invalid refresh token");
         }
 
-        String username = jwtTokenProvider.getUsernameFromToken(refreshToken);
-        String refreshTokenHash = jwtTokenProvider.hashRefreshToken(refreshToken);
-
-        UserSession session = sessionRepository.findByRefreshToken(refreshTokenHash)
+        UserSession session = sessionRepository.findByRefreshToken(jwtTokenProvider.hashRefreshToken(refreshToken))
                 .orElseThrow(() -> new IllegalArgumentException("Session not found"));
 
         if (!SessionStatus.ACTIVE.equals(session.getStatus())) {
@@ -58,7 +55,7 @@ public class TokenService {
             throw new IllegalArgumentException("Refresh token expired");
         }
 
-        // Отзываем старую сессию
+        // Ротация: старая сессия отзывается, выдаётся новая пара токенов
         session.setStatus(SessionStatus.REVOKED);
         sessionRepository.save(session);
 

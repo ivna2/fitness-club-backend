@@ -26,11 +26,7 @@ public class BookingController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Booking> get(@PathVariable Long id) {
-        Booking booking = bookingService.get(id);
-        if (booking == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(booking);
+        return ResponseEntity.ok(bookingService.get(id));
     }
 
     @PostMapping
@@ -42,20 +38,12 @@ public class BookingController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Booking> update(@PathVariable Long id, @Valid @RequestBody Booking booking) {
-        Booking existing = bookingService.get(id);
-        if (existing == null) {
-            return ResponseEntity.notFound().build();
-        }
         return ResponseEntity.ok(bookingService.update(id, booking));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or @bookingService.isUserBooking(authentication.name, #id)")
     public ResponseEntity<Void> cancel(@PathVariable Long id) {
-        Booking booking = bookingService.get(id);
-        if (booking == null) {
-            return ResponseEntity.notFound().build();
-        }
         bookingService.cancel(id);
         return ResponseEntity.noContent().build();
     }

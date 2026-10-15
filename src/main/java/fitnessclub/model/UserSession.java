@@ -1,17 +1,22 @@
 package fitnessclub.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_sessions")
+@Getter
+@Setter
 public class UserSession {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Lob // ← для неограниченной длины
+    // Хранится не сам refresh-токен, а его HMAC-хэш
     @Column(nullable = false, unique = true, columnDefinition = "TEXT")
     private String refreshToken;
 
@@ -27,23 +32,4 @@ public class UserSession {
 
     @Column(nullable = false)
     private LocalDateTime expiresAt;
-
-    // Геттеры и сеттеры
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getRefreshToken() { return refreshToken; }
-    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
-
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
-
-    public SessionStatus getStatus() { return status; }
-    public void setStatus(SessionStatus status) { this.status = status; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-
-    public LocalDateTime getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }
 }

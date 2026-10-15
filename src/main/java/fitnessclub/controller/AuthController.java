@@ -1,4 +1,3 @@
-// src/main/java/fitnessclub/controller/AuthController.java
 package fitnessclub.controller;
 
 import fitnessclub.dto.LoginRequest;

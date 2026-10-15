@@ -2,66 +2,46 @@ package fitnessclub.controller;
 
 import fitnessclub.model.Member;
 import fitnessclub.service.MemberService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Controller
-@RequiredArgsConstructor
+import java.util.List;
+
+import static org.springframework.http.HttpStatus.CREATED;
+
+@RestController
 @RequestMapping("/members")
+@RequiredArgsConstructor
 public class MemberController {
 
     private final MemberService memberService;
 
     @GetMapping
-    public String listMembers(Model model) {
-        model.addAttribute("members", memberService.getAllMembers());
-        return "members";
+    public ResponseEntity<List<Member>> getAll() {
+        return ResponseEntity.ok(memberService.getAllMembers());
     }
 
-    @PostMapping("/add")
-    public String addMember(@RequestParam String name, @RequestParam String email, Model model) {
-        if (name == null || name.trim().isEmpty()) {
-            model.addAttribute("errorMessage", "Name is required");
-            return "members";
-        }
-        if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
-            model.addAttribute("errorMessage", "Invalid email format");
-            return "members";
-        }
-        Member member = new Member(null, name, email);
-        memberService.add(member);
-        return "redirect:/members";
+    @GetMapping("/{id}")
+    public ResponseEntity<Member> get(@PathVariable Long id) {
+        return ResponseEntity.ok(memberService.get(id));
     }
 
-    @PostMapping("/update")
-    public String updateMember(@RequestParam Long id, @RequestParam String name, @RequestParam String email, Model model) {
-        if (name == null || name.trim().isEmpty()) {
-            model.addAttribute("errorMessage", "Name is required");
-            return "members";
-        }
-        if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
-            model.addAttribute("errorMessage", "Invalid email format");
-            return "members";
-        }
-        Member member = memberService.get(id);
-        if (member == null) {
-            model.addAttribute("errorMessage", "Member not found");
-            return "members";
-        }
-        member.setName(name);
-        member.setEmail(email);
-        memberService.update(id, member);
-        return "redirect:/members";
+    @PostMapping
+    public ResponseEntity<Member> add(@Valid @RequestBody Member member) {
+        member.setId(null);
+        return ResponseEntity.status(CREATED).body(memberService.add(member));
     }
 
-    @PostMapping("/delete")
-    public String deleteMember(@RequestParam Long id) {
-        if (memberService.get(id) == null) {
-            return "redirect:/members?error=Member+not+found";
-        }
+    @PutMapping("/{id}")
+    public ResponseEntity<Member> update(@PathVariable Long id, @Valid @RequestBody Member member) {
+        return ResponseEntity.ok(memberService.update(id, member));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         memberService.delete(id);
-        return "redirect:/members";
+        return ResponseEntity.noContent().build();
     }
 }
